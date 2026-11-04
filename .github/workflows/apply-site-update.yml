@@ -1,0 +1,28 @@
+name: Apply website update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'djalbirov-site-updated.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Unpack updated website
+        run: |
+          unzip -o djalbirov-site-updated.zip -d .
+          rm djalbirov-site-updated.zip
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets favicon.png favicon-32.png apple-touch-icon.png og.jpg
+          git commit -m "Update hero portrait and photo gallery"
+          git push
