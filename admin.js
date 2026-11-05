@@ -166,6 +166,12 @@ function renderDetail(brief) {
   word.textContent = 'Скачать бриф Word';
   word.addEventListener('click', () => downloadWord(brief, word));
   actions.append(word);
+  const preview = document.createElement('button');
+  preview.type = 'button';
+  preview.className = 'btn ghost sm';
+  preview.textContent = 'Просмотреть';
+  preview.addEventListener('click', () => openBriefPreview(brief));
+  actions.append(preview);
   if (brief.photos?.length) {
     const archive = document.createElement('button');
     archive.type = 'button';
@@ -366,6 +372,32 @@ function downloadWord(brief, button) {
 
 function escapeXml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function openBriefPreview(brief) {
+  const page = window.open('', '_blank');
+  if (!page) {
+    window.alert('Разрешите открытие новой вкладки, чтобы посмотреть бриф.');
+    return;
+  }
+  page.opener = null;
+  const answers = [...groupAnswers(brief.answers || {})].filter(([group]) => group !== 'Контакты');
+  const sections = answers.map(([group, rows]) => `<section><h2>${escapeHtml(group)}</h2><dl>${rows.map(([label, value]) => `<div class="answer"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value).replace(/\r?\n/g, '<br>')}</dd></div>`).join('')}</dl></section>`).join('');
+  const photos = brief.photos?.length ? `<section><h2>Фотографии</h2><ul>${brief.photos.map((path, index) => `<li>Фото ${index + 1}: ${escapeHtml(path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, ''))}</li>`).join('')}</ul><p class="hint">Сами файлы можно скачать ZIP-архивом из кабинета.</p></section>` : '';
+  const name = escapeHtml(brief.answers?.contactName || 'Без имени');
+  const phone = escapeHtml(brief.answers?.contactPhone || '—');
+  const title = escapeHtml(labels[brief.type] || 'Мероприятие');
+  const date = escapeHtml(formatDate(brief.createdAt));
+  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f5f0"><title>${title} · ${name}</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f7f5f0;color:#282720;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.sheet{width:min(100%,860px);margin:0 auto;padding:clamp(22px,6vw,64px)}.brand{color:#8a7652;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}.rule{height:3px;width:52px;background:#d5b46a;margin:18px 0 28px}h1{margin:0;color:#25231e;font:700 clamp(30px,7vw,48px)/1.1 Georgia,serif;letter-spacing:-.035em}h2{margin:0 0 12px;padding-bottom:9px;border-bottom:1px solid #dfd8ca;color:#80652f;font:700 19px/1.35 Georgia,serif}h3{margin:0;color:#8a7652;font-size:12px;letter-spacing:.12em;text-transform:uppercase}.subtitle{margin:10px 0 26px;color:#80652f;font-size:17px;font-weight:600}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 36px}.fact{min-width:0;padding:14px;border:1px solid #e3ded3;border-radius:8px;background:#fff}.fact small{display:block;margin-bottom:5px;color:#7b766c;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.fact b{display:block;overflow-wrap:anywhere;font-size:14px}section{margin:30px 0}dl{margin:0;border:1px solid #e3ded3;border-radius:8px;background:#fff;overflow:hidden}.answer{display:grid;grid-template-columns:minmax(135px,.34fr) minmax(0,1fr);gap:16px;padding:14px 16px;border-bottom:1px solid #eeeae2}.answer:last-child{border-bottom:0}dt{color:#76684b;font-size:13px;font-weight:650}dd{margin:0;white-space:normal;overflow-wrap:anywhere}ul{margin:0;padding:18px 24px;border:1px solid #e3ded3;border-radius:8px;background:#fff}.hint{color:#777064;font-size:13px}.foot{margin-top:46px;padding-top:16px;border-top:1px solid #dfd8ca;color:#8a7652;font-size:11px;letter-spacing:.1em;text-align:center}@media(max-width:560px){body{font-size:15px}.sheet{padding:24px 18px 40px}.facts{grid-template-columns:1fr 1fr}.fact:last-child{grid-column:1/-1}.answer{grid-template-columns:1fr;gap:4px;padding:13px 14px}h2{font-size:18px}}@media print{body{background:#fff}.sheet{width:100%;padding:0}section{break-inside:avoid}dl,.fact,ul{box-shadow:none}}
+  </style></head><body><main class="sheet"><p class="brand">Ramazan Djalbirov · ведущий мероприятий</p><div class="rule"></div><h1>Бриф мероприятия</h1><p class="subtitle">${title}</p><div class="facts"><div class="fact"><small>Контактное лицо</small><b>${name}</b></div><div class="fact"><small>Телефон</small><b>${phone}</b></div><div class="fact"><small>Получено</small><b>${date}</b></div></div>${sections}${photos}<footer class="foot">РАМАЗАН ДЖАЛБИРОВ · DJALBIROV.KZ</footer></main></body></html>`;
+  page.document.open();
+  page.document.write(html);
+  page.document.close();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 async function deleteBrief(brief, button) {
