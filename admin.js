@@ -310,92 +310,45 @@ async function downloadArchive(brief, button) {
   finally { setTimeout(() => { button.disabled = false; button.textContent = 'Скачать фото ZIP'; }, 2200); }
 }
 
-function downloadWord(brief, button) {
+async function downloadWord(brief, button) {
   button.disabled = true;
   button.textContent = 'Готовим Word…';
   try {
-    const encoder = new TextEncoder();
-    const paragraphs = [];
-    const run = (text, options = {}) => {
-      const props = [options.bold ? '<w:b/>' : '', options.color ? `<w:color w:val="${options.color}"/>` : '', options.size ? `<w:sz w:val="${options.size}"/>` : ''].join('');
-      const body = String(text).split(/\r?\n/).map((line, index) => `${index ? '<w:br/>' : ''}<w:t xml:space="preserve">${escapeXml(line || ' ')}</w:t>`).join('');
-      return `<w:r>${props ? `<w:rPr>${props}</w:rPr>` : ''}${body}</w:r>`;
-    };
-    const paragraph = (runs, style = 'Normal', extra = '') => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}${extra}</w:pPr>${runs}</w:p>`;
-    const cell = (text, width, isLabel = false) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${isLabel ? '<w:shd w:val="clear" w:color="auto" w:fill="F5F1E8"/>' : ''}<w:vAlign w:val="center"/></w:tcPr>${paragraph(run(text, isLabel ? { bold: true, color: '80652F' } : { color: '292722' }), 'Normal', '<w:spacing w:before="80" w:after="80"/>')}</w:tc>`;
-    const table = (rows) => `<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="5" w:color="E3DED3"/><w:left w:val="single" w:sz="5" w:color="E3DED3"/><w:bottom w:val="single" w:sz="5" w:color="E3DED3"/><w:right w:val="single" w:sz="5" w:color="E3DED3"/><w:insideH w:val="single" w:sz="5" w:color="E3DED3"/><w:insideV w:val="single" w:sz="5" w:color="E3DED3"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="2600"/><w:gridCol w:w="7038"/></w:tblGrid>${rows.map(([label, value]) => `<w:tr>${cell(label, 2600, true)}${cell(value, 7038)}</w:tr>`).join('')}</w:tbl>`;
-
-    paragraphs.push(paragraph(run('RAMAZAN DJALBIROV · ВЕДУЩИЙ МЕРОПРИЯТИЙ', { bold: true, color: '8A7652', size: 18 }), 'Brand'));
-    paragraphs.push(paragraph(run('БРИФ МЕРОПРИЯТИЯ', { bold: true, color: '9A7739', size: 38 }), 'Title', '<w:spacing w:before="100" w:after="80"/>'));
-    paragraphs.push(paragraph(run(labels[brief.type] || 'Мероприятие', { bold: true, color: '302D26', size: 26 }), 'Subtitle'));
-    paragraphs.push(paragraph(run('ИНФОРМАЦИЯ О ЗАЯВКЕ', { bold: true, color: '8A7652', size: 18 }), 'Brand', '<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="8" w:color="D5B46A"/></w:pBdr>'));
-    paragraphs.push(table([
-      ['Имя', brief.answers?.contactName || 'Без имени'],
-      ['Телефон / WhatsApp', brief.answers?.contactPhone || '—'],
-      ['Получено', formatDate(brief.createdAt)],
-    ]));
-    paragraphs.push(paragraph(run('ОТВЕТЫ', { bold: true, color: '8A7652', size: 18 }), 'Brand', '<w:spacing w:before="280" w:after="60"/>'));
-    for (const [groupName, rows] of groupAnswers(brief.answers || {})) {
-      if (groupName === 'Контакты') continue;
-      paragraphs.push(paragraph(run(groupName, { bold: true, color: '80652F', size: 26 }), 'Heading1', '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="3" w:color="D5B46A"/></w:pBdr>'));
-      paragraphs.push(table(rows));
-    }
-    if (brief.photos?.length) {
-      paragraphs.push(paragraph(run('ПРИЛОЖЕННЫЕ ФОТОГРАФИИ', { bold: true, color: '80652F', size: 26 }), 'Heading1', '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="3" w:color="D5B46A"/></w:pBdr>'));
-      paragraphs.push(table(brief.photos.map((path, index) => {
-        const filename = path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, '');
-        return [`Фото ${index + 1}`, filename];
-      })));
-    }
-    paragraphs.push(paragraph(run('РАМАЗАН ДЖАЛБИРОВ · DJALBIROV.KZ', { color: '8A7652', size: 18 }), 'Brand', '<w:spacing w:before="360" w:after="0"/><w:jc w:val="center"/>'));
-    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="292722"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="paragraph" w:styleId="Brand"><w:name w:val="Brand"/><w:pPr><w:spacing w:after="80"/><w:keepNext/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="120"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="38"/><w:color w:val="9A7739"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:pPr><w:spacing w:after="220"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="302D26"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:keepNext/><w:spacing w:before="260" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="80652F"/></w:rPr></w:style></w:styles>`;
-    const files = [
-      { name: '[Content_Types].xml', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>') },
-      { name: '_rels/.rels', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
-      { name: 'word/document.xml', bytes: encoder.encode(documentXml) },
-      { name: 'word/_rels/document.xml.rels', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>') },
-      { name: 'word/styles.xml', bytes: encoder.encode(stylesXml) },
-    ];
-    const safeName = `${labels[brief.type] || 'Бриф'}-${brief.answers?.contactName || 'гость'}`.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').slice(0, 80);
-    const archive = makeZip(files);
-    const url = URL.createObjectURL(new Blob([archive], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-    const link = document.createElement('a'); link.href = url; link.download = `${safeName}.docx`; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    button.textContent = 'Word скачан';
+    const url = `/api/admin/brief-doc?id=${encodeURIComponent(brief.id)}`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.click();
+    button.textContent = 'Документ подготовлен';
   } catch (error) {
-    button.textContent = 'Не удалось скачать';
+    button.textContent = error.message || 'Не удалось скачать';
   } finally {
-    setTimeout(() => { button.disabled = false; button.textContent = 'Скачать бриф Word'; }, 2200);
+    setTimeout(() => { button.disabled = false; button.textContent = 'Скачать бриф Word'; }, 2400);
   }
 }
-
-function escapeXml(value) {
-  return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-}
-
 function openBriefPreview(brief) {
-  const page = window.open('', '_blank');
-  if (!page) {
-    window.alert('Разрешите открытие новой вкладки, чтобы посмотреть бриф.');
-    return;
-  }
-  page.opener = null;
+  document.getElementById('briefPreviewModal')?.remove();
   const answers = [...groupAnswers(brief.answers || {})].filter(([group]) => group !== 'Контакты');
-  const sections = answers.map(([group, rows]) => `<section><h2>${escapeHtml(group)}</h2><dl>${rows.map(([label, value]) => `<div class="answer"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value).replace(/\r?\n/g, '<br>')}</dd></div>`).join('')}</dl></section>`).join('');
-  const photos = brief.photos?.length ? `<section><h2>Фотографии</h2><ul>${brief.photos.map((path, index) => `<li>Фото ${index + 1}: ${escapeHtml(path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, ''))}</li>`).join('')}</ul><p class="hint">Сами файлы можно скачать ZIP-архивом из кабинета.</p></section>` : '';
-  const name = escapeHtml(brief.answers?.contactName || 'Без имени');
-  const phone = escapeHtml(brief.answers?.contactPhone || '—');
-  const title = escapeHtml(labels[brief.type] || 'Мероприятие');
-  const date = escapeHtml(formatDate(brief.createdAt));
-  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f5f0"><title>${title} · ${name}</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f7f5f0;color:#282720;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.sheet{width:min(100%,860px);margin:0 auto;padding:clamp(22px,6vw,64px)}.brand{color:#8a7652;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}.rule{height:3px;width:52px;background:#d5b46a;margin:18px 0 28px}h1{margin:0;color:#25231e;font:700 clamp(30px,7vw,48px)/1.1 Georgia,serif;letter-spacing:-.035em}h2{margin:0 0 12px;padding-bottom:9px;border-bottom:1px solid #dfd8ca;color:#80652f;font:700 19px/1.35 Georgia,serif}h3{margin:0;color:#8a7652;font-size:12px;letter-spacing:.12em;text-transform:uppercase}.subtitle{margin:10px 0 26px;color:#80652f;font-size:17px;font-weight:600}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 36px}.fact{min-width:0;padding:14px;border:1px solid #e3ded3;border-radius:8px;background:#fff}.fact small{display:block;margin-bottom:5px;color:#7b766c;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.fact b{display:block;overflow-wrap:anywhere;font-size:14px}section{margin:30px 0}dl{margin:0;border:1px solid #e3ded3;border-radius:8px;background:#fff;overflow:hidden}.answer{display:grid;grid-template-columns:minmax(135px,.34fr) minmax(0,1fr);gap:16px;padding:14px 16px;border-bottom:1px solid #eeeae2}.answer:last-child{border-bottom:0}dt{color:#76684b;font-size:13px;font-weight:650}dd{margin:0;white-space:normal;overflow-wrap:anywhere}ul{margin:0;padding:18px 24px;border:1px solid #e3ded3;border-radius:8px;background:#fff}.hint{color:#777064;font-size:13px}.foot{margin-top:46px;padding-top:16px;border-top:1px solid #dfd8ca;color:#8a7652;font-size:11px;letter-spacing:.1em;text-align:center}@media(max-width:560px){body{font-size:15px}.sheet{padding:24px 18px 40px}.facts{grid-template-columns:1fr 1fr}.fact:last-child{grid-column:1/-1}.answer{grid-template-columns:1fr;gap:4px;padding:13px 14px}h2{font-size:18px}}@media print{body{background:#fff}.sheet{width:100%;padding:0}section{break-inside:avoid}dl,.fact,ul{box-shadow:none}}
-  </style></head><body><main class="sheet"><p class="brand">Ramazan Djalbirov · ведущий мероприятий</p><div class="rule"></div><h1>Бриф мероприятия</h1><p class="subtitle">${title}</p><div class="facts"><div class="fact"><small>Контактное лицо</small><b>${name}</b></div><div class="fact"><small>Телефон</small><b>${phone}</b></div><div class="fact"><small>Получено</small><b>${date}</b></div></div>${sections}${photos}<footer class="foot">РАМАЗАН ДЖАЛБИРОВ · DJALBIROV.KZ</footer></main></body></html>`;
-  page.document.open();
-  page.document.write(html);
-  page.document.close();
+  const sections = answers.map(([group, rows]) => `<section class="phone-preview-section"><h2>${escapeHtml(group)}</h2><dl>${rows.map(([label, value]) => `<div class="phone-preview-answer"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value).replace(/\r?\n/g, '<br>')}</dd></div>`).join('')}</dl></section>`).join('');
+  const photos = brief.photos?.length ? `<section class="phone-preview-section"><h2>Фотографии</h2><ul>${brief.photos.map((path, index) => `<li>Фото ${index + 1}: ${escapeHtml(path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, ''))}</li>`).join('')}</ul><p class="phone-preview-hint">Сами файлы можно скачать ZIP-архивом из кабинета.</p></section>` : '';
+  const modal = document.createElement('div');
+  modal.id = 'briefPreviewModal';
+  modal.className = 'phone-preview-modal';
+  modal.innerHTML = `<div class="phone-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="phonePreviewTitle"><header class="phone-preview-bar"><strong id="phonePreviewTitle">Просмотр брифа</strong><button type="button" class="phone-preview-close" aria-label="Закрыть">×</button></header><main class="phone-preview-content"><p class="phone-preview-brand">RAMAZAN DJALBIROV · ВЕДУЩИЙ МЕРОПРИЯТИЙ</p><div class="phone-preview-rule"></div><h1>Бриф мероприятия</h1><p class="phone-preview-type">${escapeHtml(labels[brief.type] || 'Мероприятие')}</p><div class="phone-preview-facts"><div><small>Контактное лицо</small><strong>${escapeHtml(brief.answers?.contactName || 'Без имени')}</strong></div><div><small>Телефон</small><strong>${escapeHtml(brief.answers?.contactPhone || '—')}</strong></div><div><small>Получено</small><strong>${escapeHtml(formatDate(brief.createdAt))}</strong></div></div>${sections}${photos}<footer class="phone-preview-footer">РАМАЗАН ДЖАЛБИРОВ · DJALBIROV.KZ</footer></main></div>`;
+  const previousOverflow = document.body.style.overflow;
+  document.body.append(modal);
+  document.body.style.overflow = 'hidden';
+  const close = () => {
+    modal.remove();
+    document.body.style.overflow = previousOverflow;
+    document.removeEventListener('keydown', onKeyDown);
+  };
+  const onKeyDown = (event) => { if (event.key === 'Escape') close(); };
+  modal.querySelector('.phone-preview-close').addEventListener('click', close);
+  modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+  document.addEventListener('keydown', onKeyDown);
 }
-
 function escapeHtml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
