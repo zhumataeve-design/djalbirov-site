@@ -111,7 +111,8 @@ function renderList() {
     pill.className = 'status-pill';
     pill.textContent = statuses[brief.status] || statuses.new;
     button.append(title, meta, pill);
-    button.addEventListener('click', () => openBrief(brief.id));
+    button.setAttribute('aria-expanded', String(brief.id === selectedId));
+    button.addEventListener('click', () => toggleBrief(brief.id));
     listEl.append(button);
   }
 }
@@ -131,6 +132,16 @@ async function openBrief(id) {
   } catch (error) {
     detailEl.textContent = error.message;
   }
+}
+
+function toggleBrief(id) {
+  if (selectedId === id) {
+    selectedId = '';
+    renderList();
+    showEmpty();
+    return;
+  }
+  openBrief(id);
 }
 
 function renderDetail(brief) {
@@ -163,6 +174,12 @@ function renderDetail(brief) {
     archive.addEventListener('click', () => downloadArchive(brief, archive));
     actions.append(archive);
   }
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'btn ghost sm';
+  remove.textContent = 'Удалить бриф';
+  remove.addEventListener('click', () => deleteBrief(brief, remove));
+  actions.append(remove);
   head.append(heading, actions);
   detailEl.append(head);
 
@@ -293,23 +310,40 @@ function downloadWord(brief, button) {
   try {
     const encoder = new TextEncoder();
     const paragraphs = [];
-    const paragraph = (text, style = 'Normal') => `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r>${text}</w:r></w:p>`;
-    const run = (text, bold = false) => text.split(/\r?\n/).map((line, index) => `${index ? '<w:br/>' : ''}${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${escapeXml(line)}</w:t>`).join('');
-    paragraphs.push(paragraph(run(`Бриф: ${labels[brief.type] || 'Мероприятие'}`), 'Title'));
-    paragraphs.push(paragraph(run(`Заполнил(а): ${brief.answers?.contactName || 'Без имени'} · отправлено ${formatDate(brief.createdAt)}`)));
+    const run = (text, options = {}) => {
+      const props = [options.bold ? '<w:b/>' : '', options.color ? `<w:color w:val="${options.color}"/>` : '', options.size ? `<w:sz w:val="${options.size}"/>` : ''].join('');
+      const body = String(text).split(/\r?\n/).map((line, index) => `${index ? '<w:br/>' : ''}<w:t xml:space="preserve">${escapeXml(line || ' ')}</w:t>`).join('');
+      return `<w:r>${props ? `<w:rPr>${props}</w:rPr>` : ''}${body}</w:r>`;
+    };
+    const paragraph = (runs, style = 'Normal', extra = '') => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}${extra}</w:pPr>${runs}</w:p>`;
+    const cell = (text, width, isLabel = false) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${isLabel ? '<w:shd w:val="clear" w:color="auto" w:fill="F5F1E8"/>' : ''}<w:vAlign w:val="center"/></w:tcPr>${paragraph(run(text, isLabel ? { bold: true, color: '80652F' } : { color: '292722' }), 'Normal', '<w:spacing w:before="80" w:after="80"/>')}</w:tc>`;
+    const table = (rows) => `<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tblCellMar><w:tblBorders><w:top w:val="single" w:sz="5" w:color="E3DED3"/><w:left w:val="single" w:sz="5" w:color="E3DED3"/><w:bottom w:val="single" w:sz="5" w:color="E3DED3"/><w:right w:val="single" w:sz="5" w:color="E3DED3"/><w:insideH w:val="single" w:sz="5" w:color="E3DED3"/><w:insideV w:val="single" w:sz="5" w:color="E3DED3"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="2600"/><w:gridCol w:w="7038"/></w:tblGrid>${rows.map(([label, value]) => `<w:tr>${cell(label, 2600, true)}${cell(value, 7038)}</w:tr>`).join('')}</w:tbl>`;
+
+    paragraphs.push(paragraph(run('RAMAZAN DJALBIROV · ВЕДУЩИЙ МЕРОПРИЯТИЙ', { bold: true, color: '8A7652', size: 18 }), 'Brand'));
+    paragraphs.push(paragraph(run('БРИФ МЕРОПРИЯТИЯ', { bold: true, color: '9A7739', size: 38 }), 'Title', '<w:spacing w:before="100" w:after="80"/>'));
+    paragraphs.push(paragraph(run(labels[brief.type] || 'Мероприятие', { bold: true, color: '302D26', size: 26 }), 'Subtitle'));
+    paragraphs.push(paragraph(run('ИНФОРМАЦИЯ О ЗАЯВКЕ', { bold: true, color: '8A7652', size: 18 }), 'Brand', '<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="8" w:color="D5B46A"/></w:pBdr>'));
+    paragraphs.push(table([
+      ['Имя', brief.answers?.contactName || 'Без имени'],
+      ['Телефон / WhatsApp', brief.answers?.contactPhone || '—'],
+      ['Получено', formatDate(brief.createdAt)],
+    ]));
+    paragraphs.push(paragraph(run('ОТВЕТЫ', { bold: true, color: '8A7652', size: 18 }), 'Brand', '<w:spacing w:before="280" w:after="60"/>'));
     for (const [groupName, rows] of groupAnswers(brief.answers || {})) {
-      paragraphs.push(paragraph(run(groupName), 'Heading1'));
-      for (const [label, value] of rows) paragraphs.push(paragraph(`${run(`${label}:`, true)}${run(` ${value}`)}`));
+      if (groupName === 'Контакты') continue;
+      paragraphs.push(paragraph(run(groupName, { bold: true, color: '80652F', size: 26 }), 'Heading1', '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="3" w:color="D5B46A"/></w:pBdr>'));
+      paragraphs.push(table(rows));
     }
     if (brief.photos?.length) {
-      paragraphs.push(paragraph(run('Приложенные фотографии'), 'Heading1'));
-      for (const path of brief.photos) {
+      paragraphs.push(paragraph(run('ПРИЛОЖЕННЫЕ ФОТОГРАФИИ', { bold: true, color: '80652F', size: 26 }), 'Heading1', '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="3" w:color="D5B46A"/></w:pBdr>'));
+      paragraphs.push(table(brief.photos.map((path, index) => {
         const filename = path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, '');
-        paragraphs.push(paragraph(run(filename)));
-      }
+        return [`Фото ${index + 1}`, filename];
+      })));
     }
+    paragraphs.push(paragraph(run('РАМАЗАН ДЖАЛБИРОВ · DJALBIROV.KZ', { color: '8A7652', size: 18 }), 'Brand', '<w:spacing w:before="360" w:after="0"/><w:jc w:val="center"/>'));
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="260"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:keepNext/><w:spacing w:before="260" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style></w:styles>`;
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="292722"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="paragraph" w:styleId="Brand"><w:name w:val="Brand"/><w:pPr><w:spacing w:after="80"/><w:keepNext/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="120"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="38"/><w:color w:val="9A7739"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:pPr><w:spacing w:after="220"/><w:keepNext/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="302D26"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:keepNext/><w:spacing w:before="260" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="80652F"/></w:rPr></w:style></w:styles>`;
     const files = [
       { name: '[Content_Types].xml', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>') },
       { name: '_rels/.rels', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
@@ -318,7 +352,8 @@ function downloadWord(brief, button) {
       { name: 'word/styles.xml', bytes: encoder.encode(stylesXml) },
     ];
     const safeName = `${labels[brief.type] || 'Бриф'}-${brief.answers?.contactName || 'гость'}`.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').slice(0, 80);
-    const url = URL.createObjectURL(makeZip(files));
+    const archive = makeZip(files);
+    const url = URL.createObjectURL(new Blob([archive], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
     const link = document.createElement('a'); link.href = url; link.download = `${safeName}.docx`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     button.textContent = 'Word скачан';
@@ -331,6 +366,23 @@ function downloadWord(brief, button) {
 
 function escapeXml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+async function deleteBrief(brief, button) {
+  const name = brief.answers?.contactName || 'без имени';
+  if (!window.confirm(`Точно удалить бриф «${labels[brief.type] || 'Мероприятие'} · ${name}»? Ответы и прикреплённые фотографии будут удалены без возможности восстановления.`)) return;
+  button.disabled = true;
+  button.textContent = 'Удаляем…';
+  try {
+    await call('/api/admin/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: brief.id }) });
+    briefs = briefs.filter((item) => item.id !== brief.id);
+    selectedId = '';
+    renderList();
+    showEmpty();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = error.message || 'Не удалось удалить';
+  }
 }
 
 function makeZip(files) {
