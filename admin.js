@@ -119,7 +119,7 @@ function renderList() {
 
 function showEmpty() {
   const hasBriefs = briefs.length > 0;
-  detailEl.innerHTML = `<div class="empty-state"><p class="eyebrow">${hasBriefs ? 'Ответы гостей' : 'Пока пусто'}</p><h2>${hasBriefs ? 'Выберите бриф' : 'Нет отправленных брифов'}</h2><p>${hasBriefs ? 'Нажмите на карточку слева, чтобы открыть ответы и фотографии.' : 'Новые ответы появятся здесь после отправки формы гостями.'}</p></div>`;
+  detailEl.innerHTML = `<div class="empty-state"><p class="eyebrow">${hasBriefs ? 'Ответы гостей' : 'Пока пусто'}</p><h2>${hasBriefs ? 'Выберите бриф' : 'Нет отправленных брифов'}</h2><p>${hasBriefs ? 'Нажмите на заявку в списке, чтобы открыть ответы и фотографии.' : 'Новые ответы появятся здесь после отправки формы гостями.'}</p></div>`;
 }
 
 async function openBrief(id) {
