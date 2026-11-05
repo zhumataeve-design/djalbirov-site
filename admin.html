@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0a08">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Кабинет администратора — Рамазан Джалбиров</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Onest:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="brief.css">
+</head>
+<body>
+  <header class="page-head admin-head">
+    <a class="brand" href="/" aria-label="На сайт Рамазана Джалбирова"><span class="brand-mark">RJ</span><span>Кабинет</span></a>
+    <button class="btn ghost sm" id="logoutButton" type="button" hidden>Выйти</button>
+  </header>
+  <main class="wrap admin-page">
+    <section class="login-panel" id="loginPanel">
+      <p class="eyebrow">Закрытый доступ</p><h1>Кабинет администратора</h1>
+      <p class="section-copy">Введите пароль, чтобы открыть ответы на брифы.</p>
+      <form id="loginForm" class="login-form"><label class="field"><span>Пароль</span><input type="password" name="password" autocomplete="current-password" required></label><button class="btn" type="submit">Войти <span aria-hidden="true">→</span></button><p class="form-status" id="loginStatus" role="status" aria-live="polite"></p></form>
+    </section>
+    <section id="adminApp" hidden>
+      <div class="admin-title"><div><p class="eyebrow">Личные брифы</p><h1>Ответы гостей</h1></div><button class="btn ghost sm" id="refreshButton" type="button">Обновить</button></div>
+      <div class="share-panel"><div><p class="eyebrow">Ссылки для гостей</p><p class="section-copy">Скопируйте ссылку нужного типа и отправьте гостю напрямую.</p></div><div class="share-links" id="shareLinks"></div></div>
+      <div class="admin-layout">
+        <aside class="brief-list" id="briefList" aria-label="Список брифов"></aside>
+        <article class="brief-detail" id="briefDetail"><div class="empty-state"><p class="eyebrow">Пока пусто</p><h2>Выберите бриф</h2><p>Новые ответы появятся здесь после отправки формы гостями.</p></div></article>
+      </div>
+    </section>
+  </main>
+  <script src="admin.js" type="module"></script>
+</body>
+</html>

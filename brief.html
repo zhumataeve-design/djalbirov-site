@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0a08">
+  <meta name="description" content="Заполните бриф к вашему мероприятию для Рамазана Джалбирова.">
+  <title>Бриф мероприятия — Рамазан Джалбиров</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Onest:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="brief.css">
+</head>
+<body>
+  <header class="page-head">
+    <a class="brand" href="/" aria-label="На сайт Рамазана Джалбирова"><span class="brand-mark">RJ</span><span>Рамазан Джалбиров</span></a>
+    <span class="eyebrow">Подготовка к мероприятию</span>
+  </header>
+  <main class="page wrap">
+    <section class="intro">
+      <p class="eyebrow" id="formKicker">Анкета</p>
+      <h1 id="formTitle">Бриф мероприятия</h1>
+      <p class="intro-text">Расскажите немного о событии и его участниках. Ваши ответы помогут подготовить программу, в которой будет комфортно именно вашим гостям.</p>
+      <p class="required-hint">Поля со звёздочкой обязательны. Остальное можно заполнить так, как удобно.</p>
+    </section>
+    <form id="briefForm" novalidate>
+      <div id="formSections"></div>
+      <section class="form-section upload-section">
+        <div class="section-heading"><span class="section-no">04</span><div><p class="eyebrow">По желанию</p><h2>Фотографии</h2></div></div>
+        <p class="section-copy">Можно прикрепить фотографии, которые помогут в подготовке. Они останутся приватными и будут доступны только администратору в кабинете.</p>
+        <label class="upload-box" for="photos"><span class="upload-icon" aria-hidden="true">＋</span><span><b>Выбрать фотографии</b><small>JPG, PNG, WebP или HEIC · до 20 фото · до 10 МБ каждое</small></span><input id="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple></label>
+        <ul class="file-list" id="fileList" aria-live="polite"></ul>
+      </section>
+      <label class="consent"><input type="checkbox" id="consent" required><span>Я согласен(на), что ответы и приложенные фотографии будут использованы для подготовки моего мероприятия и доступны администратору сайта.</span></label>
+      <div class="submit-row"><button class="btn" type="submit" id="submitButton">Отправить бриф <span aria-hidden="true">→</span></button><a class="back-link" href="/">Вернуться на сайт</a></div>
+      <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+    </form>
+    <section class="success" id="success" hidden>
+      <p class="eyebrow">Готово</p><h2>Спасибо за ответы</h2>
+      <p>Бриф отправлен. Рамазан сможет открыть его в кабинете и использовать при подготовке мероприятия.</p>
+      <a class="btn ghost" href="/">На главную</a>
+    </section>
+  </main>
+  <footer class="page-foot"><span>Астана · djalbirov.kz</span><a href="https://wa.me/77767898040" target="_blank" rel="noopener">Есть вопрос? Напишите в WhatsApp</a></footer>
+  <script type="importmap">{"imports":{"@vercel/blob/client":"https://esm.sh/@vercel/blob@2.3.0/client?bundle"}}</script>
+  <script src="brief.js" type="module"></script>
+</body>
+</html>
