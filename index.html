@@ -74,6 +74,8 @@ h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1}
 .drawer.open{transform:none}
 .drawer a{font-family:var(--f-display);font-size:28px;text-decoration:none}
 .drawer .x{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:var(--gut-r);background:none;border:1px solid var(--line);color:var(--fg);border-radius:999px;width:44px;height:44px;font-size:20px;cursor:pointer}
+.drawer .drawer-admin{display:flex;align-items:center;gap:12px;margin-top:auto;padding-top:18px;border-top:1px solid var(--line);font:500 13px var(--f-body);letter-spacing:.08em;color:var(--muted)}
+.drawer-admin-mark{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--gold);border-radius:50%;color:var(--gold);font:600 10px var(--f-display);letter-spacing:0}
 
 /* ---------- hero ---------- */
 .hero{position:relative;padding-top:110px;overflow:hidden;isolation:isolate}
@@ -290,6 +292,7 @@ footer img{height:26px;width:auto}
   <a href="#price">Стоимость</a>
   <a href="#contacts">Контакты</a>
   <button class="btn" data-quiz style="align-self:flex-start;margin-top:12px">Рассчитать стоимость</button>
+  <a class="drawer-admin" href="/admin.html"><span class="drawer-admin-mark" aria-hidden="true">RJ</span><span>Кабинет администратора</span></a>
 </div>
 
 <main id="top">
