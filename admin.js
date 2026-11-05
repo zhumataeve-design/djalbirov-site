@@ -87,8 +87,7 @@ async function loadBriefs() {
     briefs = data.briefs || [];
     renderList();
     if (selectedId && briefs.some((brief) => brief.id === selectedId)) await openBrief(selectedId);
-    else if (briefs[0]) await openBrief(briefs[0].id);
-    else showEmpty();
+    else { selectedId = ''; renderList(); showEmpty(); }
   } catch (error) {
     listEl.textContent = error.message;
     loginPanel.hidden = false;
@@ -118,7 +117,8 @@ function renderList() {
 }
 
 function showEmpty() {
-  detailEl.innerHTML = '<div class="empty-state"><p class="eyebrow">Пока пусто</p><h2>Выберите бриф</h2><p>Новые ответы появятся здесь после отправки формы гостями.</p></div>';
+  const hasBriefs = briefs.length > 0;
+  detailEl.innerHTML = `<div class="empty-state"><p class="eyebrow">${hasBriefs ? 'Ответы гостей' : 'Пока пусто'}</p><h2>${hasBriefs ? 'Выберите бриф' : 'Нет отправленных брифов'}</h2><p>${hasBriefs ? 'Нажмите на карточку слева, чтобы открыть ответы и фотографии.' : 'Новые ответы появятся здесь после отправки формы гостями.'}</p></div>`;
 }
 
 async function openBrief(id) {
@@ -149,6 +149,12 @@ function renderDetail(brief) {
   heading.append(eyebrow, title, meta);
   const actions = document.createElement('div');
   actions.className = 'detail-actions';
+  const word = document.createElement('button');
+  word.type = 'button';
+  word.className = 'btn sm';
+  word.textContent = 'Скачать бриф Word';
+  word.addEventListener('click', () => downloadWord(brief, word));
+  actions.append(word);
   if (brief.photos?.length) {
     const archive = document.createElement('button');
     archive.type = 'button';
@@ -279,6 +285,52 @@ async function downloadArchive(brief, button) {
     button.textContent = 'Архив скачан';
   } catch (error) { button.textContent = error.message; }
   finally { setTimeout(() => { button.disabled = false; button.textContent = 'Скачать фото ZIP'; }, 2200); }
+}
+
+function downloadWord(brief, button) {
+  button.disabled = true;
+  button.textContent = 'Готовим Word…';
+  try {
+    const encoder = new TextEncoder();
+    const paragraphs = [];
+    const paragraph = (text, style = 'Normal') => `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r>${text}</w:r></w:p>`;
+    const run = (text, bold = false) => text.split(/\r?\n/).map((line, index) => `${index ? '<w:br/>' : ''}${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${escapeXml(line)}</w:t>`).join('');
+    paragraphs.push(paragraph(run(`Бриф: ${labels[brief.type] || 'Мероприятие'}`), 'Title'));
+    paragraphs.push(paragraph(run(`Заполнил(а): ${brief.answers?.contactName || 'Без имени'} · отправлено ${formatDate(brief.createdAt)}`)));
+    for (const [groupName, rows] of groupAnswers(brief.answers || {})) {
+      paragraphs.push(paragraph(run(groupName), 'Heading1'));
+      for (const [label, value] of rows) paragraphs.push(paragraph(`${run(`${label}:`, true)}${run(` ${value}`)}`));
+    }
+    if (brief.photos?.length) {
+      paragraphs.push(paragraph(run('Приложенные фотографии'), 'Heading1'));
+      for (const path of brief.photos) {
+        const filename = path.split('/').pop().replace(/^[0-9a-f-]{36}-/i, '');
+        paragraphs.push(paragraph(run(filename)));
+      }
+    }
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:spacing w:after="260"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:keepNext/><w:spacing w:before="260" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style></w:styles>`;
+    const files = [
+      { name: '[Content_Types].xml', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>') },
+      { name: '_rels/.rels', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
+      { name: 'word/document.xml', bytes: encoder.encode(documentXml) },
+      { name: 'word/_rels/document.xml.rels', bytes: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>') },
+      { name: 'word/styles.xml', bytes: encoder.encode(stylesXml) },
+    ];
+    const safeName = `${labels[brief.type] || 'Бриф'}-${brief.answers?.contactName || 'гость'}`.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').slice(0, 80);
+    const url = URL.createObjectURL(makeZip(files));
+    const link = document.createElement('a'); link.href = url; link.download = `${safeName}.docx`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    button.textContent = 'Word скачан';
+  } catch (error) {
+    button.textContent = 'Не удалось скачать';
+  } finally {
+    setTimeout(() => { button.disabled = false; button.textContent = 'Скачать бриф Word'; }, 2200);
+  }
+}
+
+function escapeXml(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 function makeZip(files) {
