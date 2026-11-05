@@ -323,7 +323,7 @@ function downloadWord(brief, button) {
     };
     const paragraph = (runs, style = 'Normal', extra = '') => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}${extra}</w:pPr>${runs}</w:p>`;
     const cell = (text, width, isLabel = false) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${isLabel ? '<w:shd w:val="clear" w:color="auto" w:fill="F5F1E8"/>' : ''}<w:vAlign w:val="center"/></w:tcPr>${paragraph(run(text, isLabel ? { bold: true, color: '80652F' } : { color: '292722' }), 'Normal', '<w:spacing w:before="80" w:after="80"/>')}</w:tc>`;
-    const table = (rows) => `<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tblCellMar><w:tblBorders><w:top w:val="single" w:sz="5" w:color="E3DED3"/><w:left w:val="single" w:sz="5" w:color="E3DED3"/><w:bottom w:val="single" w:sz="5" w:color="E3DED3"/><w:right w:val="single" w:sz="5" w:color="E3DED3"/><w:insideH w:val="single" w:sz="5" w:color="E3DED3"/><w:insideV w:val="single" w:sz="5" w:color="E3DED3"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="2600"/><w:gridCol w:w="7038"/></w:tblGrid>${rows.map(([label, value]) => `<w:tr>${cell(label, 2600, true)}${cell(value, 7038)}</w:tr>`).join('')}</w:tbl>`;
+    const table = (rows) => `<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="5" w:color="E3DED3"/><w:left w:val="single" w:sz="5" w:color="E3DED3"/><w:bottom w:val="single" w:sz="5" w:color="E3DED3"/><w:right w:val="single" w:sz="5" w:color="E3DED3"/><w:insideH w:val="single" w:sz="5" w:color="E3DED3"/><w:insideV w:val="single" w:sz="5" w:color="E3DED3"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="2600"/><w:gridCol w:w="7038"/></w:tblGrid>${rows.map(([label, value]) => `<w:tr>${cell(label, 2600, true)}${cell(value, 7038)}</w:tr>`).join('')}</w:tbl>`;
 
     paragraphs.push(paragraph(run('RAMAZAN DJALBIROV · ВЕДУЩИЙ МЕРОПРИЯТИЙ', { bold: true, color: '8A7652', size: 18 }), 'Brand'));
     paragraphs.push(paragraph(run('БРИФ МЕРОПРИЯТИЯ', { bold: true, color: '9A7739', size: 38 }), 'Title', '<w:spacing w:before="100" w:after="80"/>'));
@@ -371,7 +371,7 @@ function downloadWord(brief, button) {
 }
 
 function escapeXml(value) {
-  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 function openBriefPreview(brief) {
